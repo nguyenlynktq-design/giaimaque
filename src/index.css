@@ -1,0 +1,135 @@
+@import "tailwindcss";
+
+@layer base {
+  body {
+    font-family: 'Be Vietnam Pro', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+}
+
+.font-poem {
+  font-family: 'Merriweather', Georgia, serif;
+}
+
+.font-serif-title {
+  font-family: 'Playfair Display', Georgia, serif;
+}
+
+/* 16:9 Canvas ratio locking and fluid scaling */
+.game-wrapper {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle at 50% 20%, #0a3a60 0%, #04192b 100%);
+  overflow: hidden;
+}
+
+.aspect-16-9-box {
+  width: 100%;
+  height: 100%;
+  max-width: 177.78vh; /* 16:9 calculation */
+  max-height: 56.25vw;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+  background: linear-gradient(180deg, #092c4a 0%, #0b3c5d 35%, #051d30 100%);
+}
+
+/* Ambient animated ocean waves */
+.ocean-wave-bg {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 200%;
+  height: 120px;
+  background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 120" preserveAspectRatio="none"><path d="M0,0 C150,90 350,-40 500,50 C650,140 900,10 1200,60 L1200,120 L0,120 Z" fill="rgba(255,255,255,0.04)"/></svg>') repeat-x;
+  animation: waveFlow 25s linear infinite;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.ocean-wave-bg.layer2 {
+  height: 90px;
+  animation: waveFlow 18s linear reverse infinite;
+  background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 120" preserveAspectRatio="none"><path d="M0,40 C200,100 450,10 700,70 C950,130 1100,20 1200,50 L1200,120 L0,120 Z" fill="rgba(246,213,92,0.05)"/></svg>') repeat-x;
+  bottom: 10px;
+  z-index: 1;
+}
+
+@keyframes waveFlow {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+/* Floating seabirds */
+.seabird {
+  position: absolute;
+  pointer-events: none;
+  opacity: 0.45;
+  animation: birdFly 35s linear infinite;
+  z-index: 2;
+}
+
+@keyframes birdFly {
+  0% { transform: translate(-80px, 40px) scale(0.6); }
+  50% { transform: translate(60vw, 15px) scale(0.75); }
+  100% { transform: translate(110vw, 60px) scale(0.6); }
+}
+
+/* Glow and active ring */
+.glow-gold {
+  box-shadow: 0 0 25px rgba(246, 213, 92, 0.7), inset 0 0 15px rgba(246, 213, 92, 0.4);
+}
+
+.glow-sea {
+  box-shadow: 0 0 20px rgba(50, 140, 193, 0.7);
+}
+
+.active-team-ring {
+  outline: 3px solid #f6d55c;
+  box-shadow: 0 0 18px rgba(246, 213, 92, 0.8);
+  transform: scale(1.02);
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.2);
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(246, 213, 92, 0.35);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(246, 213, 92, 0.6);
+}
+
+/* Subtle Pulse */
+@keyframes subtlePulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+.pulse-subtle {
+  animation: subtlePulse 2.4s ease-in-out infinite;
+}
+
+/* Audio wave animation for speaking indicator */
+@keyframes soundBarPulse {
+  0%, 100% { height: 4px; }
+  50% { height: 16px; }
+}
+
+.sound-bar {
+  display: inline-block;
+  width: 3px;
+  background-color: #38bdf8;
+  border-radius: 2px;
+  animation: soundBarPulse 1s ease-in-out infinite;
+}
