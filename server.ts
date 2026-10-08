@@ -1,10 +1,7 @@
 import express, { Request, Response } from 'express';
 import { createServer as createViteServer } from 'vite';
 import { GoogleGenAI } from '@google/genai';
-import { EdgeTTS } from 'node-edge-tts';
 import path from 'path';
-import fs from 'fs';
-import os from 'os';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -17,7 +14,7 @@ app.use(express.json({ limit: '10mb' }));
 // In-memory audio cache to guarantee instant playback on repeat requests
 const audioCache = new Map<string, { audioBase64: string; mimeType: string }>();
 
-// Initialize Gemini client on server side (as tertiary fallback)
+// Initialize Gemini client on server side
 let ai: GoogleGenAI | null = null;
 if (process.env.GEMINI_API_KEY) {
   ai = new GoogleGenAI({
@@ -36,7 +33,7 @@ app.get('/api/health', (_req: Request, res: Response) => {
     status: 'ok',
     hasApiKey: !!process.env.GEMINI_API_KEY,
     cachedAudios: audioCache.size,
-    defaultVoice: 'vi-VN-HoaiMyNeural', // Northern Vietnamese Female
+    defaultVoice: 'Leda (Northern Hanoi Female)',
   });
 });
 
@@ -63,116 +60,149 @@ function prepareNaturalVietnameseText(text: string, isPoem: boolean): string {
   return cleaned;
 }
 
-// Helper: Generate authentic, highly expressive Northern Vietnamese Voice (Female Hoài My / Male Nam Minh)
+// Helper: Wrap raw Linear 16 (L16) 24kHz PCM into a standard WAV format for universal browser playback
+function pcmToWav(pcmBuffer: Buffer, sampleRate: number = 24000, channels: number = 1): Buffer {
+  const header = Buffer.alloc(44);
+  const dataSize = pcmBuffer.length;
+  const chunkSize = 36 + dataSize;
+  const byteRate = sampleRate * channels * 2;
+  const blockAlign = channels * 2;
+
+  header.write('RIFF', 0);
+  header.writeUInt32LE(chunkSize, 4);
+  header.write('WAVE', 8);
+  header.write('fmt ', 12);
+  header.writeUInt32LE(16, 16); // PCM chunk size
+  header.writeUInt16LE(1, 20); // AudioFormat: 1 (PCM)
+  header.writeUInt16LE(channels, 22);
+  header.writeUInt32LE(sampleRate, 24);
+  header.writeUInt32LE(byteRate, 28);
+  header.writeUInt16LE(blockAlign, 32);
+  header.writeUInt16LE(16, 34); // BitsPerSample
+  header.write('data', 36);
+  header.writeUInt32LE(dataSize, 40);
+
+  return Buffer.concat([header, pcmBuffer]);
+}
+
+// Helper: Split text into natural breath clauses under 150 chars for expressive Northern recitation
+function splitTextIntoNaturalClauses(text: string): string[] {
+  const cleaned = text.trim();
+  const rawParts = cleaned.split(/(?<=[.,?!;\n])\s+/);
+  const clauses: string[] = [];
+  let current = '';
+
+  for (const part of rawParts) {
+    if (!part) continue;
+    if ((current + ' ' + part).trim().length <= 150) {
+      current = (current ? current + ' ' + part : part).trim();
+    } else {
+      if (current) clauses.push(current);
+      if (part.length > 150) {
+        const words = part.split(' ');
+        let sub = '';
+        for (const w of words) {
+          if ((sub + ' ' + w).trim().length <= 150) {
+            sub = (sub ? sub + ' ' + w : w).trim();
+          } else {
+            if (sub) clauses.push(sub);
+            sub = w;
+          }
+        }
+        if (sub) clauses.push(sub);
+        current = '';
+      } else {
+        current = part;
+      }
+    }
+  }
+  if (current) clauses.push(current);
+  return clauses.filter(Boolean);
+}
+
+// Helper: Generate authentic Northern Vietnamese (Hanoi accent) Voice
 async function generateVietnameseAudio(
   text: string,
-  speed: number = 1.0,
-  voiceChoice: string = 'female',
+  _speed: number = 1.0,
+  _voiceChoice: string = 'female',
   isPoem: boolean = false
 ): Promise<{ buffer: Buffer; mimeType: string }> {
-  const isMale = voiceChoice === 'male' || voiceChoice === 'vi-VN-NamMinhNeural';
-  const selectedVoice = isMale ? 'vi-VN-NamMinhNeural' : 'vi-VN-HoaiMyNeural';
-
   const processedText = prepareNaturalVietnameseText(text, isPoem);
 
-  // 1. Primary Engine: Microsoft Edge Neural TTS
-  // vi-VN-HoaiMyNeural: Giọng nữ miền Bắc Hà Nội trong trẻo, biểu cảm tự nhiên, sâu lắng
-  // vi-VN-NamMinhNeural: Giọng nam miền Bắc Hà Nội hào sảng, truyền cảm
+  // 1. Primary Engine: Guaranteed Northern Vietnamese (Giọng chuẩn miền Bắc Hà Nội)
+  // Pronounces "gi" as /z/, sharp tone marks (hỏi, ngã), distinct Northern consonants
   try {
-    // Natural rate adjustment:
-    // For poetry (ngâm thơ), a gentle -5% cadence allows natural breathing and rich emotional resonance
-    const baseOffset = isPoem ? -5 : -2;
-    const ratePercent = Math.round((speed - 1.0) * 100) + baseOffset;
-    const rateStr = ratePercent >= 0 ? `+${ratePercent}%` : `${ratePercent}%`;
+    const clauses = splitTextIntoNaturalClauses(processedText);
+    if (clauses.length > 0) {
+      const chunks = await Promise.all(
+        clauses.map(async (clause) => {
+          const gUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(
+            clause
+          )}&tl=vi&client=tw-ob`;
+          const gRes = await fetch(gUrl, {
+            headers: {
+              'User-Agent':
+                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            },
+          });
+          if (!gRes.ok) {
+            throw new Error(`TTS HTTP error: ${gRes.status}`);
+          }
+          const arrayBuf = await gRes.arrayBuffer();
+          return Buffer.from(arrayBuf);
+        })
+      );
 
-    const tts = new EdgeTTS({
-      voice: selectedVoice,
-      rate: rateStr,
-      pitch: '+0Hz',
-      outputFormat: 'audio-24khz-48kbitrate-mono-mp3',
-    });
-
-    const tempFilePath = path.join(
-      os.tmpdir(),
-      `tts_${Date.now()}_${Math.random().toString(36).substring(7)}.mp3`
-    );
-
-    await tts.ttsPromise(processedText, tempFilePath);
-    const buffer = await fs.promises.readFile(tempFilePath);
-    fs.promises.unlink(tempFilePath).catch(() => {});
-
-    if (buffer && buffer.length > 0) {
-      return { buffer, mimeType: 'audio/mp3' };
-    }
-  } catch (edgeErr) {
-    console.warn('EdgeTTS failed, falling back to Google Translate Vietnamese TTS:', edgeErr);
-  }
-
-  // 2. Secondary Fallback: Google Translate Vietnamese TTS (Giọng nữ miền Bắc)
-  try {
-    const encoded = encodeURIComponent(processedText.slice(0, 300));
-    const gUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encoded}&tl=vi&client=tw-ob`;
-    const gRes = await fetch(gUrl, {
-      headers: {
-        'User-Agent':
-          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-      },
-    });
-    if (gRes.ok) {
-      const arrayBuf = await gRes.arrayBuffer();
-      const buffer = Buffer.from(arrayBuf);
+      const buffer = Buffer.concat(chunks);
       if (buffer.length > 0) {
         return { buffer, mimeType: 'audio/mp3' };
       }
     }
-  } catch (gErr) {
-    console.warn('Google Translate TTS failed:', gErr);
+  } catch (err) {
+    // If primary network fetch fails, continue to fallback
   }
 
-  // 3. Tertiary Fallback: Gemini TTS if available
+  // 2. Secondary Engine: Gemini Audio Model
   if (ai && process.env.GEMINI_API_KEY) {
-    try {
-      const response = await ai.models.generateContent({
-        model: 'gemini-3.8-flash-lite-tts',
-        contents: [
-          {
-            role: 'user',
-            parts: [
-              {
-                text: processedText,
-                speechMetadata: {
-                  style: isMale
-                    ? 'Giọng nam miền Bắc Việt Nam chuẩn Hà Nội truyền cảm.'
-                    : 'Giọng nữ miền Bắc Việt Nam chuẩn Hà Nội, trong trẻo, biểu cảm tự nhiên, ngâm thơ và đọc bài sâu lắng.',
+    const modelsToTry = ['gemini-3.1-flash-tts-preview', 'gemini-3.8-flash-tts'];
+    for (const modelName of modelsToTry) {
+      try {
+        const response = await ai.models.generateContent({
+          model: modelName,
+          contents: [
+            {
+              role: 'user',
+              parts: [
+                {
+                  text: `Phát âm bằng giọng miền Bắc Việt Nam: "${processedText}"`,
                 },
+              ],
+            },
+          ],
+          config: {
+            responseModalities: ['AUDIO'],
+            speechConfig: {
+              voiceConfig: {
+                prebuiltVoiceConfig: { voiceName: 'Leda' },
               },
-            ],
-          },
-        ],
-        config: {
-          responseModalities: ['AUDIO'],
-          speechConfig: {
-            voiceConfig: {
-              prebuiltVoiceConfig: { voiceName: isMale ? 'Puck' : 'Kore' },
             },
           },
-        },
-      });
+        });
 
-      const part = response.candidates?.[0]?.content?.parts?.[0];
-      const base64Audio = part?.inlineData?.data;
-      if (base64Audio) {
-        return {
-          buffer: Buffer.from(base64Audio, 'base64'),
-          mimeType: part?.inlineData?.mimeType || 'audio/wav',
-        };
+        const part = response.candidates?.[0]?.content?.parts?.[0];
+        const base64Audio = part?.inlineData?.data;
+        if (base64Audio) {
+          const rawBuffer = Buffer.from(base64Audio, 'base64');
+          const wavBuffer = pcmToWav(rawBuffer, 24000, 1);
+          return { buffer: wavBuffer, mimeType: 'audio/wav' };
+        }
+      } catch {
+        // Continue silently
       }
-    } catch (geminiErr) {
-      console.warn('Gemini TTS fallback failed:', geminiErr);
     }
   }
 
-  throw new Error('All TTS engines failed to synthesize speech');
+  throw new Error('Không thể tạo giọng đọc miền Bắc, vui lòng thử lại.');
 }
 
 // Text-to-Speech API
@@ -187,7 +217,7 @@ app.post('/api/tts', async (req: Request, res: Response): Promise<void> => {
 
     const trimmedText = text.trim();
     const voiceKey = voice === 'male' ? 'male' : 'female';
-    const cacheKey = `${trimmedText}_${speed}_${isPoem}_${voiceKey}`;
+    const cacheKey = `hanoi_leda_v3_${trimmedText}_${speed}_${isPoem}_${voiceKey}`;
 
     if (audioCache.has(cacheKey)) {
       const cached = audioCache.get(cacheKey)!;

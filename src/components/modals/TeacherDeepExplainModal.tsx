@@ -41,7 +41,7 @@ export const TeacherDeepExplainModal: React.FC<TeacherDeepExplainModalProps> = (
               <button
                 onClick={handleSpeakQuestion}
                 className="px-2 py-0.5 rounded bg-sky-800/60 hover:bg-sky-700 text-cyan-200 text-[11px] flex items-center space-x-1 cursor-pointer"
-                title="Đọc câu hỏi bằng giọng nam Miền Bắc"
+                title="Đọc câu hỏi bằng giọng nữ Miền Bắc chuẩn Hà Nội"
               >
                 <span>🔊</span>
                 <span>Đọc câu hỏi</span>

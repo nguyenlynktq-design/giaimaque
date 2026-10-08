@@ -71,6 +71,7 @@ class AudioService {
 
   public setVoiceGender(gender: 'female' | 'male') {
     this.voiceGender = gender;
+    this.cachedBlobs.clear();
     this.notify();
   }
 
@@ -239,7 +240,7 @@ class AudioService {
     if (options.onStart) options.onStart();
 
     const cleanText = text.trim();
-    const cacheKey = `${cleanText}_${this.voiceRate}_${this.voiceGender}`;
+    const cacheKey = `hanoi_leda_v3_${cleanText}_${this.voiceRate}_${this.voiceGender}`;
 
     // 1. Check client-side cached Blob URL
     if (this.cachedBlobs.has(cacheKey)) {

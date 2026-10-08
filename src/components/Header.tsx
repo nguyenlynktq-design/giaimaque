@@ -187,7 +187,7 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
         )}
 
-        {/* Voice Gender Switcher (Female Hoài My / Male Nam Minh) */}
+        {/* Voice Switcher (Female Leda / Male Nam Minh) */}
         <div className="flex items-center bg-slate-950/80 rounded-lg p-0.5 border border-sky-500/30 text-[11px]">
           <button
             onClick={() => onToggleVoiceGender('female')}
@@ -196,10 +196,10 @@ export const Header: React.FC<HeaderProps> = ({
                 ? 'bg-rose-600 text-white font-bold shadow'
                 : 'text-slate-400 hover:text-white'
             }`}
-            title="Giọng nữ Miền Bắc (Hoài My - Chuẩn Hà Nội trong trẻo)"
+            title="Giọng Leda nữ Miền Bắc (Chuẩn Hà Nội trong trẻo, biểu cảm tự nhiên, truyền cảm)"
           >
             <span>👩</span>
-            <span className="hidden lg:inline text-[10px]">Nữ Bắc</span>
+            <span className="text-[10px] font-semibold">Leda (Nữ HN)</span>
           </button>
           <button
             onClick={() => onToggleVoiceGender('male')}
@@ -208,10 +208,10 @@ export const Header: React.FC<HeaderProps> = ({
                 ? 'bg-sky-600 text-white font-bold shadow'
                 : 'text-slate-400 hover:text-white'
             }`}
-            title="Giọng nam Miền Bắc (Nam Minh - Chuẩn Hà Nội trầm ấm)"
+            title="Giọng nam Miền Bắc (Nam Minh - Chuẩn Hà Nội trầm ấm, hào sảng)"
           >
             <span>👨</span>
-            <span className="hidden lg:inline text-[10px]">Nam Bắc</span>
+            <span className="hidden sm:inline text-[10px]">Nam Minh</span>
           </button>
         </div>
 

@@ -1,6 +1,6 @@
 {
   "name": "Giải Mã Hồn Làng - Quê Hương (Tế Hanh)",
-  "description": "Trò chơi học tập tương tác khám phá thi phẩm Quê hương của Tế Hanh với 6 chặng hải trình, thi đua 4 đội và giọng đọc nữ/nam Miền Bắc Việt Nam chuẩn xác truyền cảm.",
+  "description": "Trò chơi học tập tương tác khám phá thi phẩm Quê hương của Tế Hanh với 6 chặng hải trình, thi đua 4 đội và giọng đọc Leda nữ Miền Bắc Hà Nội Việt Nam truyền cảm tự nhiên.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

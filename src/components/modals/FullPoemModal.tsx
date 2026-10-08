@@ -174,7 +174,7 @@ export const FullPoemModal: React.FC<FullPoemModalProps> = ({ onClose }) => {
 
         {/* Footer */}
         <div className="pt-2 border-t border-slate-700 flex items-center justify-between text-[11px] text-slate-400 flex-shrink-0">
-          <span>🎙️ Giọng nam miền Bắc Việt Nam chuẩn Hà Nội truyền cảm • Có hỗ trợ Tạm dừng / Tiếp tục</span>
+          <span>🎙️ Giọng nữ miền Bắc Việt Nam chuẩn Hà Nội truyền cảm • Có hỗ trợ Tạm dừng / Tiếp tục</span>
           <button
             onClick={() => {
               audioService.stop();
