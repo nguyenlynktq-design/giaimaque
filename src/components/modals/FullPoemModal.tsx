@@ -8,9 +8,11 @@ interface FullPoemModalProps {
 
 export const FullPoemModal: React.FC<FullPoemModalProps> = ({ onClose }) => {
   const [playingStanza, setPlayingStanza] = useState<number | 'all' | null>(null);
+  const [isPaused, setIsPaused] = useState(false);
 
   useEffect(() => {
-    const unsub = audioService.subscribe((speaking) => {
+    const unsub = audioService.subscribe((speaking, paused) => {
+      setIsPaused(paused);
       if (!speaking) {
         setPlayingStanza(null);
       }
@@ -20,8 +22,7 @@ export const FullPoemModal: React.FC<FullPoemModalProps> = ({ onClose }) => {
 
   const handleReciteStanza = (stanzaIndex: number, lines: string[]) => {
     if (playingStanza === stanzaIndex) {
-      audioService.stop();
-      setPlayingStanza(null);
+      audioService.togglePause();
       return;
     }
     setPlayingStanza(stanzaIndex);
@@ -34,8 +35,7 @@ export const FullPoemModal: React.FC<FullPoemModalProps> = ({ onClose }) => {
 
   const handleReciteAll = () => {
     if (playingStanza === 'all') {
-      audioService.stop();
-      setPlayingStanza(null);
+      audioService.togglePause();
       return;
     }
     setPlayingStanza('all');
@@ -47,6 +47,10 @@ export const FullPoemModal: React.FC<FullPoemModalProps> = ({ onClose }) => {
         onEnd: () => setPlayingStanza(null),
       }
     );
+  };
+
+  const handleTogglePause = () => {
+    audioService.togglePause();
   };
 
   const handleStop = () => {
@@ -70,17 +74,29 @@ export const FullPoemModal: React.FC<FullPoemModalProps> = ({ onClose }) => {
 
           <div className="flex items-center space-x-2">
             {playingStanza ? (
-              <button
-                onClick={handleStop}
-                className="px-3 py-1 rounded-lg bg-rose-800 hover:bg-rose-700 text-white text-xs font-bold flex items-center space-x-1 cursor-pointer"
-              >
-                <span>⏹</span>
-                <span>Dừng đọc</span>
-              </button>
+              <div className="flex items-center space-x-1.5 bg-slate-800 p-1 rounded-xl border border-amber-400/50">
+                <button
+                  onClick={handleTogglePause}
+                  className="px-2.5 py-1 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold flex items-center space-x-1 cursor-pointer transition active:scale-95 shadow"
+                  title={isPaused ? 'Tiếp tục ngâm thơ' : 'Tạm dừng ngâm thơ'}
+                >
+                  <span>{isPaused ? '▶' : '⏸'}</span>
+                  <span>{isPaused ? 'Tiếp tục' : 'Tạm dừng'}</span>
+                </button>
+
+                <button
+                  onClick={handleStop}
+                  className="px-2.5 py-1 rounded-lg bg-rose-800 hover:bg-rose-700 text-white text-xs font-bold flex items-center space-x-1 cursor-pointer"
+                  title="Dừng đọc"
+                >
+                  <span>⏹</span>
+                  <span>Dừng</span>
+                </button>
+              </div>
             ) : (
               <button
                 onClick={handleReciteAll}
-                className="px-3 py-1 rounded-lg bg-gradient-to-r from-amber-500 to-yellow-400 hover:from-amber-400 text-slate-950 text-xs font-bold flex items-center space-x-1 shadow cursor-pointer"
+                className="px-3 py-1.5 rounded-lg bg-gradient-to-r from-amber-500 to-yellow-400 hover:from-amber-400 text-slate-950 text-xs font-bold flex items-center space-x-1 shadow cursor-pointer transition active:scale-95"
               >
                 <span>🔊</span>
                 <span>Ngâm toàn bài thơ</span>
@@ -88,7 +104,10 @@ export const FullPoemModal: React.FC<FullPoemModalProps> = ({ onClose }) => {
             )}
 
             <button
-              onClick={onClose}
+              onClick={() => {
+                audioService.stop();
+                onClose();
+              }}
               className="p-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 cursor-pointer"
             >
               ✕
@@ -98,7 +117,7 @@ export const FullPoemModal: React.FC<FullPoemModalProps> = ({ onClose }) => {
 
         {/* Poem Scrollable Content */}
         <div className="py-3 overflow-y-auto space-y-4 pr-1 flex-1 font-poem text-xs sm:text-sm">
-          {FULL_POEM.map((stanza, idx) => {
+          {FULL_POEM.map((stanza) => {
             const isThisPlaying = playingStanza === stanza.stanza;
             return (
               <div
@@ -113,12 +132,32 @@ export const FullPoemModal: React.FC<FullPoemModalProps> = ({ onClose }) => {
                   <span className="text-xs font-sans font-bold text-amber-400 tracking-wider">
                     {stanza.title}
                   </span>
-                  <button
-                    onClick={() => handleReciteStanza(stanza.stanza, stanza.lines)}
-                    className="px-2 py-0.5 rounded bg-sky-900/60 hover:bg-sky-800 text-cyan-200 text-[11px] font-sans flex items-center space-x-1 cursor-pointer border border-sky-500/30"
-                  >
-                    <span>{isThisPlaying ? '⏹ Dừng' : '🔊 Nghe khổ này'}</span>
-                  </button>
+                  
+                  <div className="flex items-center space-x-1">
+                    {isThisPlaying ? (
+                      <>
+                        <button
+                          onClick={handleTogglePause}
+                          className="px-2 py-0.5 rounded bg-amber-500/30 hover:bg-amber-500/50 text-amber-200 text-[11px] font-sans font-bold flex items-center space-x-1 cursor-pointer border border-amber-400/40"
+                        >
+                          <span>{isPaused ? '▶ Tiếp tục' : '⏸ Tạm dừng'}</span>
+                        </button>
+                        <button
+                          onClick={handleStop}
+                          className="px-1.5 py-0.5 rounded bg-rose-900/60 hover:bg-rose-800 text-rose-200 text-[11px] font-sans flex items-center space-x-1 cursor-pointer border border-rose-500/40"
+                        >
+                          <span>⏹ Dừng</span>
+                        </button>
+                      </>
+                    ) : (
+                      <button
+                        onClick={() => handleReciteStanza(stanza.stanza, stanza.lines)}
+                        className="px-2 py-0.5 rounded bg-sky-900/60 hover:bg-sky-800 text-cyan-200 text-[11px] font-sans flex items-center space-x-1 cursor-pointer border border-sky-500/30"
+                      >
+                        <span>🔊 Nghe khổ này</span>
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 <div className="space-y-1 pl-3 border-l-2 border-sky-500/40 text-slate-200 italic leading-relaxed">
@@ -135,9 +174,12 @@ export const FullPoemModal: React.FC<FullPoemModalProps> = ({ onClose }) => {
 
         {/* Footer */}
         <div className="pt-2 border-t border-slate-700 flex items-center justify-between text-[11px] text-slate-400 flex-shrink-0">
-          <span>🎙️ Giọng nam miền Bắc Việt Nam chuẩn Hà Nội truyền cảm</span>
+          <span>🎙️ Giọng nam miền Bắc Việt Nam chuẩn Hà Nội truyền cảm • Có hỗ trợ Tạm dừng / Tiếp tục</span>
           <button
-            onClick={onClose}
+            onClick={() => {
+              audioService.stop();
+              onClose();
+            }}
             className="px-4 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs cursor-pointer"
           >
             Đóng

@@ -3,6 +3,7 @@ import { audioService } from '../../services/audioService';
 
 interface Stage5MicroscopeProps {
   onStageComplete: () => void;
+  onSkipStage?: () => void;
   onAwardPoints: (points: number, reason: string) => void;
   onShowToast: (msg: string, icon?: string) => void;
 }
@@ -43,6 +44,7 @@ const TERMS: TermItem[] = [
 
 export const Stage5Microscope: React.FC<Stage5MicroscopeProps> = ({
   onStageComplete,
+  onSkipStage,
   onAwardPoints,
   onShowToast,
 }) => {
@@ -109,9 +111,20 @@ export const Stage5Microscope: React.FC<Stage5MicroscopeProps> = ({
             Nhấp chọn một cụm từ bên dưới, sau đó nhấp vào đối tượng tương ứng để phân loại:
           </span>
         </div>
-        <span className="text-xs bg-sky-950/80 px-2.5 py-0.5 rounded-full text-cyan-200 border border-cyan-400/30 whitespace-nowrap ml-2 font-medium">
-          Đã khớp: <strong className="text-amber-400">{count}</strong>/4 cụm từ
-        </span>
+        <div className="flex items-center space-x-2">
+          <span className="text-xs bg-sky-950/80 px-2.5 py-0.5 rounded-full text-cyan-200 border border-cyan-400/30 whitespace-nowrap font-medium">
+            Đã khớp: <strong className="text-amber-400">{count}</strong>/4 cụm từ
+          </span>
+          {onSkipStage && (
+            <button
+              onClick={onSkipStage}
+              className="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-amber-300 text-xs font-semibold border border-slate-600 cursor-pointer transition active:scale-95"
+              title="Chuyển sang chặng kế tiếp mà không tính điểm"
+            >
+              ⏭️ Chuyển chặng (0đ)
+            </button>
+          )}
+        </div>
       </div>
 
       {/* 2 Classification Zones */}
@@ -250,6 +263,17 @@ export const Stage5Microscope: React.FC<Stage5MicroscopeProps> = ({
                   Biển chỉ là cảnh vật địa lý bên ngoài
                 </button>
               </div>
+
+              {onSkipStage && (
+                <div className="mt-2 pt-2 border-t border-slate-800 flex justify-end">
+                  <button
+                    onClick={onSkipStage}
+                    className="px-3 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-amber-300 text-xs font-semibold border border-slate-600 cursor-pointer transition active:scale-95"
+                  >
+                    ⏭️ Chuyển chặng tiếp (0 điểm)
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>

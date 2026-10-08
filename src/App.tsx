@@ -41,9 +41,20 @@ export default function App() {
   ]);
   const [aiStageCompleted, setAiStageCompleted] = useState<boolean>(false);
 
-  // Audio settings
+  // Audio state
   const [soundEnabled, setSoundEnabled] = useState<boolean>(true);
   const [voiceRate, setVoiceRate] = useState<number>(1.0);
+  const [voiceGender, setVoiceGender] = useState<'female' | 'male'>('female');
+  const [isSpeaking, setIsSpeaking] = useState<boolean>(false);
+  const [isPaused, setIsPaused] = useState<boolean>(false);
+
+  useEffect(() => {
+    return audioService.subscribe((speaking, paused, _text, gender) => {
+      setIsSpeaking(speaking);
+      setIsPaused(paused);
+      setVoiceGender(gender);
+    });
+  }, []);
 
   // Modals state
   const [activeFragmentModal, setActiveFragmentModal] = useState<Fragment | null>(null);
@@ -67,6 +78,17 @@ export default function App() {
     setVoiceRate(rate);
     audioService.setRate(rate);
     showToastNotification(`Tốc độ giọng đọc: ${rate}x`, '🎙️');
+  };
+
+  const handleToggleVoiceGender = (gender: 'female' | 'male') => {
+    setVoiceGender(gender);
+    audioService.setVoiceGender(gender);
+    showToastNotification(
+      gender === 'female'
+        ? 'Đã chọn: Giọng nữ Miền Bắc (Hoài My)'
+        : 'Đã chọn: Giọng nam Miền Bắc (Nam Minh)',
+      gender === 'female' ? '👩' : '👨'
+    );
   };
 
   const showToastNotification = (message: string, icon = '✨') => {
@@ -131,6 +153,33 @@ export default function App() {
       setUnlockedStages((prev) => Math.max(prev, nextStage));
     } else {
       // Completed all 6 stages -> Finale!
+      setShowFinale(true);
+    }
+  };
+
+  // Skip stage when answering incorrectly or wishing to proceed without awarding points
+  const handleSkipStage = (stageNum: number) => {
+    audioService.stop();
+    const stageLabel = stageNum === 3.5 ? 'Trạm AI' : `Chặng ${stageNum}`;
+    showToastNotification(`Đã chuyển qua chặng tiếp theo (0 điểm cho ${stageLabel})`, '⏭️');
+
+    if (stageNum === 3.5) {
+      setAiStageCompleted(true);
+      setCurrentStage(4);
+      setUnlockedStages((prev) => Math.max(prev, 4));
+    } else if (stageNum === 3) {
+      if (!aiStageCompleted) {
+        setCurrentStage(3.5);
+      } else {
+        setCurrentStage(4);
+        setUnlockedStages((prev) => Math.max(prev, 4));
+      }
+    } else if (stageNum < 6) {
+      const nextStage = stageNum + 1;
+      setCurrentStage(nextStage);
+      setUnlockedStages((prev) => Math.max(prev, nextStage));
+    } else {
+      // Completed all stages -> Finale
       setShowFinale(true);
     }
   };
@@ -252,8 +301,10 @@ export default function App() {
           unlockedStages={unlockedStages}
           soundEnabled={soundEnabled}
           voiceRate={voiceRate}
+          voiceGender={voiceGender}
           onToggleSound={handleToggleSound}
           onSetRate={handleSetRate}
+          onToggleVoiceGender={handleToggleVoiceGender}
           onOpenGuide={() => setShowGuide(true)}
           onOpenPoem={() => setShowPoem(true)}
           onResetGame={handleResetGame}
@@ -287,14 +338,44 @@ export default function App() {
               </div>
 
               <div className="flex items-center space-x-2">
+                {isSpeaking ? (
+                  <div className="flex items-center space-x-1 bg-sky-950/90 p-1 rounded-lg border border-amber-400/60 shadow">
+                    <button
+                      onClick={() => audioService.togglePause()}
+                      className="p-1 px-2.5 rounded bg-amber-500/30 hover:bg-amber-500/50 text-amber-200 text-xs font-bold flex items-center space-x-1 cursor-pointer transition active:scale-95"
+                      title={isPaused ? 'Tiếp tục đọc đề' : 'Tạm dừng đọc đề'}
+                    >
+                      <span>{isPaused ? '▶' : '⏸'}</span>
+                      <span>{isPaused ? 'Tiếp tục' : 'Tạm dừng'}</span>
+                    </button>
+                    <button
+                      onClick={() => audioService.stop()}
+                      className="p-1 px-2 rounded bg-rose-900/60 hover:bg-rose-800 text-rose-200 text-xs font-semibold cursor-pointer transition"
+                      title="Dừng đọc đề"
+                    >
+                      <span>⏹</span>
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={handleSpeakCurrentStage}
+                    className="p-1.5 px-3 rounded-lg bg-sky-950/80 hover:bg-sky-850 text-cyan-100 text-xs font-semibold flex items-center space-x-1 border border-sky-400/40 transition cursor-pointer"
+                    title="Nghe câu hỏi bằng giọng đọc truyền cảm chuẩn Hà Nội"
+                  >
+                    <span>🔊</span>
+                    <span>Đọc đề</span>
+                  </button>
+                )}
+
                 <button
-                  onClick={handleSpeakCurrentStage}
-                  className="p-1.5 px-3 rounded-lg bg-sky-950/80 hover:bg-sky-850 text-cyan-100 text-xs font-semibold flex items-center space-x-1 border border-sky-400/40 transition cursor-pointer"
-                  title="Nghe câu hỏi bằng giọng nam Miền Bắc chuẩn xác"
+                  onClick={() => handleSkipStage(currentStage)}
+                  className="p-1.5 px-2.5 rounded-lg bg-slate-800/90 hover:bg-slate-750 text-amber-300 hover:text-amber-200 text-xs font-semibold flex items-center space-x-1 border border-amber-400/40 transition cursor-pointer active:scale-95 shadow-sm"
+                  title="Trả lời sai hoặc muốn chuyển sang chặng tiếp theo (Không tính điểm)"
                 >
-                  <span>🔊</span>
-                  <span>Đọc đề</span>
+                  <span>⏭️</span>
+                  <span>Chuyển chặng (0đ)</span>
                 </button>
+
                 <div className="text-xs px-2.5 py-1 rounded-full bg-amber-500/20 text-amber-300 border border-amber-400/40 font-semibold">
                   Đang thử thách
                 </div>
@@ -306,6 +387,7 @@ export default function App() {
               {currentStage === 1 && (
                 <Stage1Shore
                   onStageComplete={() => handleStageComplete(1)}
+                  onSkipStage={() => handleSkipStage(1)}
                   onAwardPoints={handleAwardActiveTeam}
                   onShowToast={showToastNotification}
                 />
@@ -313,6 +395,7 @@ export default function App() {
               {currentStage === 2 && (
                 <Stage2Voyage
                   onStageComplete={() => handleStageComplete(2)}
+                  onSkipStage={() => handleSkipStage(2)}
                   onAwardPoints={handleAwardActiveTeam}
                   onShowToast={showToastNotification}
                 />
@@ -320,6 +403,7 @@ export default function App() {
               {currentStage === 3 && (
                 <Stage3Sail
                   onStageComplete={() => handleStageComplete(3)}
+                  onSkipStage={() => handleSkipStage(3)}
                   onAwardPoints={handleAwardActiveTeam}
                   onShowToast={showToastNotification}
                 />
@@ -327,6 +411,7 @@ export default function App() {
               {currentStage === 3.5 && (
                 <StageAIThinking
                   onStageComplete={() => handleStageComplete(3.5)}
+                  onSkipStage={() => handleSkipStage(3.5)}
                   onAwardPoints={handleAwardActiveTeam}
                   onShowToast={showToastNotification}
                 />
@@ -334,6 +419,7 @@ export default function App() {
               {currentStage === 4 && (
                 <Stage4Harbor
                   onStageComplete={() => handleStageComplete(4)}
+                  onSkipStage={() => handleSkipStage(4)}
                   onAwardPoints={handleAwardActiveTeam}
                   onShowToast={showToastNotification}
                 />
@@ -341,6 +427,7 @@ export default function App() {
               {currentStage === 5 && (
                 <Stage5Microscope
                   onStageComplete={() => handleStageComplete(5)}
+                  onSkipStage={() => handleSkipStage(5)}
                   onAwardPoints={handleAwardActiveTeam}
                   onShowToast={showToastNotification}
                 />
@@ -348,6 +435,7 @@ export default function App() {
               {currentStage === 6 && (
                 <Stage6Longing
                   onStageComplete={() => handleStageComplete(6)}
+                  onSkipStage={() => handleSkipStage(6)}
                   onAwardPoints={handleAwardActiveTeam}
                   onShowToast={showToastNotification}
                 />

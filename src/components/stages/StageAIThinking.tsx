@@ -3,12 +3,14 @@ import { audioService } from '../../services/audioService';
 
 interface StageAIThinkingProps {
   onStageComplete: () => void;
+  onSkipStage?: () => void;
   onAwardPoints: (points: number, reason: string) => void;
   onShowToast: (msg: string, icon?: string) => void;
 }
 
 export const StageAIThinking: React.FC<StageAIThinkingProps> = ({
   onStageComplete,
+  onSkipStage,
   onAwardPoints,
   onShowToast,
 }) => {
@@ -48,9 +50,20 @@ export const StageAIThinking: React.FC<StageAIThinkingProps> = ({
             Thử thách Năng lực số: Phản biện nhận định của Trí tuệ nhân tạo (AI)
           </span>
         </div>
-        <span className="text-[11px] px-2.5 py-0.5 rounded bg-indigo-900 text-indigo-300 border border-indigo-400/40 font-semibold">
-          Tư duy phản biện
-        </span>
+        <div className="flex items-center space-x-2">
+          <span className="text-[11px] px-2.5 py-0.5 rounded bg-indigo-900 text-indigo-300 border border-indigo-400/40 font-semibold hidden sm:inline">
+            Tư duy phản biện
+          </span>
+          {onSkipStage && (
+            <button
+              onClick={onSkipStage}
+              className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-amber-300 hover:text-amber-200 text-xs font-semibold border border-slate-600 cursor-pointer transition active:scale-95"
+              title="Chuyển sang chặng kế tiếp mà không tính điểm"
+            >
+              ⏭️ Chuyển chặng (0đ)
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Simulated Chatbot Workspace */}
@@ -166,8 +179,16 @@ export const StageAIThinking: React.FC<StageAIThinkingProps> = ({
         )}
       </div>
 
-      <div className="text-[11px] text-slate-400">
-        💡 Rèn luyện tư duy độc lập: Luôn đối chiếu câu trả lời của AI với nguyên bản văn học và trải nghiệm cảm xúc con người.
+      <div className="text-[11px] text-slate-400 flex items-center justify-between">
+        <span>💡 Rèn luyện tư duy độc lập: Luôn đối chiếu câu trả lời của AI với nguyên bản văn học và trải nghiệm cảm xúc con người.</span>
+        {onSkipStage && (
+          <button
+            onClick={onSkipStage}
+            className="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-amber-300 text-xs font-semibold border border-slate-600 cursor-pointer ml-2"
+          >
+            ⏭️ Bỏ qua (0đ)
+          </button>
+        )}
       </div>
     </div>
   );

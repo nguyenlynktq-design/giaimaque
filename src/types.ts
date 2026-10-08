@@ -26,9 +26,9 @@ export interface StageInfo {
 
 export interface AudioState {
   isPlaying: boolean;
+  isPaused: boolean;
   currentText: string;
-  source: 'gemini' | 'browser' | 'none';
   rate: number;
   soundEnabled: boolean;
-  voiceGender: 'male_north';
+  voiceGender: 'female' | 'male';
 }

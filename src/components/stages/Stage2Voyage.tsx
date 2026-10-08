@@ -3,6 +3,7 @@ import { audioService } from '../../services/audioService';
 
 interface Stage2VoyageProps {
   onStageComplete: () => void;
+  onSkipStage?: () => void;
   onAwardPoints: (points: number, reason: string) => void;
   onShowToast: (msg: string, icon?: string) => void;
 }
@@ -21,6 +22,7 @@ const VERBS = [
 
 export const Stage2Voyage: React.FC<Stage2VoyageProps> = ({
   onStageComplete,
+  onSkipStage,
   onAwardPoints,
   onShowToast,
 }) => {
@@ -79,9 +81,20 @@ export const Stage2Voyage: React.FC<Stage2VoyageProps> = ({
             Nhấp chọn các động từ mạnh biểu hiện khí thế ra khơi để tiếp thêm sức mạnh cho con thuyền vượt sóng!
           </span>
         </div>
-        <span className="text-xs bg-sky-950/80 px-2.5 py-0.5 rounded-full text-cyan-200 border border-cyan-400/30 whitespace-nowrap ml-2 font-medium">
-          Đã nạp: <strong className="text-amber-400">{count}</strong>/6 động từ
-        </span>
+        <div className="flex items-center space-x-2">
+          <span className="text-xs bg-sky-950/80 px-2.5 py-0.5 rounded-full text-cyan-200 border border-cyan-400/30 whitespace-nowrap font-medium">
+            Đã nạp: <strong className="text-amber-400">{count}</strong>/6 động từ
+          </span>
+          {onSkipStage && (
+            <button
+              onClick={onSkipStage}
+              className="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-amber-300 text-xs font-semibold border border-slate-600 cursor-pointer transition active:scale-95"
+              title="Chuyển sang chặng kế tiếp mà không tính điểm"
+            >
+              ⏭️ Chuyển chặng (0đ)
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Boat Sailing Arena */}
@@ -167,6 +180,18 @@ export const Stage2Voyage: React.FC<Stage2VoyageProps> = ({
                   C. Nhấn mạnh việc ngư dân sử dụng ngựa kéo thuyền trên bờ cát
                 </button>
               </div>
+
+              {/* Skip option when answered incorrectly or wants to proceed without points */}
+              {onSkipStage && (
+                <div className="mt-3 pt-2 border-t border-slate-800 flex justify-end">
+                  <button
+                    onClick={onSkipStage}
+                    className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-amber-300 text-xs font-semibold border border-slate-600 cursor-pointer transition active:scale-95"
+                  >
+                    ⏭️ Chuyển chặng tiếp (0 điểm)
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -174,8 +199,16 @@ export const Stage2Voyage: React.FC<Stage2VoyageProps> = ({
 
       {/* Word Tray */}
       <div className="bg-slate-950/70 p-2.5 rounded-xl border border-sky-500/30">
-        <div className="text-[11px] text-slate-300 mb-1.5 font-semibold">
-          Chọn đúng 6 động từ giàu sức biểu cảm trong khổ 2:
+        <div className="flex items-center justify-between text-[11px] text-slate-300 mb-1.5 font-semibold">
+          <span>Chọn đúng 6 động từ giàu sức biểu cảm trong khổ 2:</span>
+          {onSkipStage && (
+            <button
+              onClick={onSkipStage}
+              className="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-amber-300 text-[10px] font-bold border border-slate-600 cursor-pointer"
+            >
+              ⏭️ Bỏ qua (0đ)
+            </button>
+          )}
         </div>
         <div className="flex flex-wrap gap-2 text-xs">
           {VERBS.map((v) => {

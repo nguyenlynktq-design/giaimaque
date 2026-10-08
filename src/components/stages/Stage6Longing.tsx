@@ -3,6 +3,7 @@ import { audioService } from '../../services/audioService';
 
 interface Stage6LongingProps {
   onStageComplete: () => void;
+  onSkipStage?: () => void;
   onAwardPoints: (points: number, reason: string) => void;
   onShowToast: (msg: string, icon?: string) => void;
 }
@@ -24,6 +25,7 @@ const SENSORY_ITEMS: SensoryItem[] = [
 
 export const Stage6Longing: React.FC<Stage6LongingProps> = ({
   onStageComplete,
+  onSkipStage,
   onAwardPoints,
   onShowToast,
 }) => {
@@ -85,9 +87,20 @@ export const Stage6Longing: React.FC<Stage6LongingProps> = ({
             Chọn các mảnh nhớ trong khổ thơ cuối rồi xếp vào 4 giác quan / cảm xúc tương ứng:
           </span>
         </div>
-        <span className="text-xs bg-sky-950/80 px-2.5 py-0.5 rounded-full text-cyan-200 border border-cyan-400/30 whitespace-nowrap ml-2 font-medium">
-          Đã gán: <strong className="text-amber-400">{count}</strong>/6 mảnh nhớ
-        </span>
+        <div className="flex items-center space-x-2">
+          <span className="text-xs bg-sky-950/80 px-2.5 py-0.5 rounded-full text-cyan-200 border border-cyan-400/30 whitespace-nowrap font-medium">
+            Đã gán: <strong className="text-amber-400">{count}</strong>/6 mảnh nhớ
+          </span>
+          {onSkipStage && (
+            <button
+              onClick={onSkipStage}
+              className="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-amber-300 text-xs font-semibold border border-slate-600 cursor-pointer transition active:scale-95"
+              title="Hoàn thành chặng mà không tính điểm"
+            >
+              ⏭️ Bỏ qua (0đ)
+            </button>
+          )}
+        </div>
       </div>
 
       {/* 4 Senses Grid Arena with Sunset Hue */}
@@ -257,6 +270,17 @@ export const Stage6Longing: React.FC<Stage6LongingProps> = ({
                 B. Đơn giản vì tác giả không còn từ ngữ nào khác để diễn tả màu sắc của biển khơi.
               </button>
             </div>
+
+            {onSkipStage && (
+              <div className="mt-2 pt-2 border-t border-slate-800 flex justify-end">
+                <button
+                  onClick={onSkipStage}
+                  className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-amber-300 text-xs font-semibold border border-slate-600 cursor-pointer transition active:scale-95"
+                >
+                  ⏭️ Hoàn thành hải trình (0 điểm)
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}

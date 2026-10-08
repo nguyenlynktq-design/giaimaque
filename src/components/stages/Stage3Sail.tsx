@@ -3,12 +3,14 @@ import { audioService } from '../../services/audioService';
 
 interface Stage3SailProps {
   onStageComplete: () => void;
+  onSkipStage?: () => void;
   onAwardPoints: (points: number, reason: string) => void;
   onShowToast: (msg: string, icon?: string) => void;
 }
 
 export const Stage3Sail: React.FC<Stage3SailProps> = ({
   onStageComplete,
+  onSkipStage,
   onAwardPoints,
   onShowToast,
 }) => {
@@ -35,18 +37,29 @@ export const Stage3Sail: React.FC<Stage3SailProps> = ({
       }, 900);
     } else {
       audioService.playError();
-      onShowToast('Chưa chính xác! Gợi ý: Hãy chọn 2 tầng nghĩa biểu tượng sâu sắc nhất (B và C)', '⚠️');
+      onShowToast('Chưa chính xác! Gợi ý: Hãy chọn 2 tầng nghĩa biểu tượng sâu sắc nhất (B và C), hoặc bấm chuyển chặng.', '⚠️');
     }
   };
 
   return (
     <div className="flex flex-col h-full justify-between">
       {/* Challenge Prompt */}
-      <div className="bg-slate-950/70 p-2.5 rounded-xl border border-sky-500/30 text-xs sm:text-sm">
-        <span className="text-amber-400 font-bold">Thử thách:</span>
-        <span className="text-slate-200 ml-1">
-          Chọn <strong className="text-amber-300">TẤT CẢ các tầng nghĩa đúng</strong> của câu thơ dưới đây (Có nhiều hơn một đáp án đúng):
-        </span>
+      <div className="bg-slate-950/70 p-2.5 rounded-xl border border-sky-500/30 text-xs sm:text-sm flex items-center justify-between">
+        <div>
+          <span className="text-amber-400 font-bold">Thử thách:</span>
+          <span className="text-slate-200 ml-1">
+            Chọn <strong className="text-amber-300">TẤT CẢ các tầng nghĩa đúng</strong> của câu thơ dưới đây (Có nhiều hơn một đáp án đúng):
+          </span>
+        </div>
+        {onSkipStage && (
+          <button
+            onClick={onSkipStage}
+            className="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-amber-300 text-xs font-semibold border border-slate-600 cursor-pointer transition active:scale-95"
+            title="Chuyển sang chặng kế tiếp mà không tính điểm"
+          >
+            ⏭️ Chuyển chặng (0đ)
+          </button>
+        )}
       </div>
 
       {/* Giant Sail Center Piece */}
@@ -143,7 +156,19 @@ export const Stage3Sail: React.FC<Stage3SailProps> = ({
           </label>
         </div>
 
-        <div className="flex justify-end mt-2">
+        <div className="flex items-center justify-between mt-2">
+          {onSkipStage ? (
+            <button
+              onClick={onSkipStage}
+              className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-amber-300 text-xs font-semibold border border-slate-600 cursor-pointer transition active:scale-95"
+              title="Bỏ qua thử thách và chuyển chặng mà không tính điểm"
+            >
+              ⏭️ Chuyển chặng tiếp (0 điểm)
+            </button>
+          ) : (
+            <div />
+          )}
+
           <button
             onClick={handleCheck}
             className="px-5 py-1.5 rounded-lg bg-gradient-to-r from-amber-500 to-yellow-400 hover:from-amber-400 text-slate-950 font-bold text-xs shadow-md cursor-pointer transition transform active:scale-95"

@@ -3,6 +3,7 @@ import { audioService } from '../../services/audioService';
 
 interface Stage1ShoreProps {
   onStageComplete: () => void;
+  onSkipStage?: () => void;
   onAwardPoints: (points: number, reason: string) => void;
   onShowToast: (msg: string, icon?: string) => void;
 }
@@ -30,6 +31,7 @@ const HOTSPOTS: HotspotItem[] = [
 
 export const Stage1Shore: React.FC<Stage1ShoreProps> = ({
   onStageComplete,
+  onSkipStage,
   onAwardPoints,
   onShowToast,
 }) => {
@@ -128,7 +130,18 @@ export const Stage1Shore: React.FC<Stage1ShoreProps> = ({
       {/* Footer Helper */}
       <div className="text-[11px] text-slate-400 flex items-center justify-between">
         <span>💡 Nhấp vào các hình ảnh, từ ngữ gắn với bức tranh sinh hoạt làng chài trong 2 câu thơ đầu.</span>
-        <span className="text-amber-400 font-semibold">Yêu cầu tìm đủ 6 chi tiết chính xác</span>
+        <div className="flex items-center space-x-2">
+          <span className="text-amber-400 font-semibold hidden sm:inline">Tìm đủ 6 chi tiết chính xác</span>
+          {onSkipStage && (
+            <button
+              onClick={onSkipStage}
+              className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-amber-300 hover:text-amber-200 border border-slate-600 text-xs font-semibold cursor-pointer transition active:scale-95"
+              title="Chuyển sang chặng kế tiếp mà không tính điểm"
+            >
+              ⏭️ Chuyển chặng (0đ)
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );

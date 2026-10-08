@@ -6,8 +6,11 @@ interface HeaderProps {
   unlockedStages: number;
   soundEnabled: boolean;
   voiceRate: number;
+  voiceGender: 'female' | 'male';
   onToggleSound: () => void;
   onSetRate: (rate: number) => void;
+  onToggleVoiceGender: (gender: 'female' | 'male') => void;
+  onSelectStage?: (stageId: number) => void;
   onOpenGuide: () => void;
   onOpenPoem: () => void;
   onResetGame: () => void;
@@ -27,17 +30,22 @@ export const Header: React.FC<HeaderProps> = ({
   unlockedStages,
   soundEnabled,
   voiceRate,
+  voiceGender,
   onToggleSound,
   onSetRate,
+  onToggleVoiceGender,
+  onSelectStage,
   onOpenGuide,
   onOpenPoem,
   onResetGame,
 }) => {
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
 
   useEffect(() => {
-    return audioService.subscribe((speaking) => {
+    return audioService.subscribe((speaking, paused) => {
       setIsSpeaking(speaking);
+      setIsPaused(paused);
     });
   }, []);
 
@@ -47,6 +55,14 @@ export const Header: React.FC<HeaderProps> = ({
     } else {
       document.exitFullscreen().catch(() => {});
     }
+  };
+
+  const handleTogglePause = () => {
+    audioService.togglePause();
+  };
+
+  const handleStopSpeech = () => {
+    audioService.stop();
   };
 
   return (
@@ -105,35 +121,99 @@ export const Header: React.FC<HeaderProps> = ({
             return (
               <React.Fragment key={stg.id}>
                 {idx > 0 && <span className="text-slate-600">›</span>}
-                <span
-                  className={
+                <button
+                  onClick={() => onSelectStage && onSelectStage(stg.id)}
+                  className={`cursor-pointer transition hover:opacity-90 ${
                     isCompleted
                       ? 'font-medium text-emerald-400'
                       : isCurrent
                         ? 'font-bold text-amber-300 underline'
-                        : 'text-slate-500'
-                  }
+                        : 'text-slate-400 hover:text-slate-200'
+                  }`}
+                  title={`Chuyển tới Chặng ${stg.id}: ${stg.name}`}
                 >
                   {stg.id}. {stg.name}
-                  {isCompleted ? ' ✓' : isCurrent ? '' : ' 🔒'}
-                </span>
+                  {isCompleted ? ' ✓' : ''}
+                </button>
               </React.Fragment>
             );
           })}
         </div>
       </div>
 
-      {/* Right: Audio Indicator & Controls */}
+      {/* Right: Audio Indicator & Controls with Pause/Resume and Gender Switch */}
       <div className="flex items-center space-x-1.5 sm:space-x-2">
-        {/* Speaking visualizer badge */}
+        {/* Active Audio Playback Controller */}
         {isSpeaking && (
-          <div className="flex items-center space-x-1 px-2 py-0.5 rounded-full bg-sky-950/80 border border-cyan-400/60 text-cyan-200 text-[10px]">
-            <span className="sound-bar h-2" style={{ animationDelay: '0s' }} />
-            <span className="sound-bar h-3" style={{ animationDelay: '0.2s' }} />
-            <span className="sound-bar h-2" style={{ animationDelay: '0.4s' }} />
-            <span className="ml-1 font-medium hidden sm:inline">Giọng nam miền Bắc</span>
+          <div className="flex items-center space-x-1.5 px-2 py-0.5 rounded-lg bg-sky-950 border border-amber-400/70 text-cyan-200 text-[11px] shadow-sm">
+            {/* Visualizer bars */}
+            <div className="flex items-center space-x-0.5">
+              <span
+                className={`sound-bar h-2 ${isPaused ? 'animation-none opacity-50' : ''}`}
+                style={{ animationDelay: '0s' }}
+              />
+              <span
+                className={`sound-bar h-3 ${isPaused ? 'animation-none opacity-50' : ''}`}
+                style={{ animationDelay: '0.2s' }}
+              />
+              <span
+                className={`sound-bar h-2 ${isPaused ? 'animation-none opacity-50' : ''}`}
+                style={{ animationDelay: '0.4s' }}
+              />
+            </div>
+
+            <span className="hidden sm:inline font-medium text-[10px] text-amber-300">
+              {isPaused ? 'Tạm dừng' : 'Đang đọc'}
+            </span>
+
+            {/* Pause / Resume Button */}
+            <button
+              onClick={handleTogglePause}
+              className="px-1.5 py-0.5 rounded bg-amber-500/30 hover:bg-amber-500/50 text-amber-200 border border-amber-400/50 flex items-center space-x-0.5 font-bold cursor-pointer transition active:scale-95"
+              title={isPaused ? 'Tiếp tục đọc (Resume)' : 'Tạm dừng giọng đọc (Pause)'}
+            >
+              <span>{isPaused ? '▶' : '⏸'}</span>
+              <span className="text-[10px]">{isPaused ? 'Tiếp tục' : 'Tạm dừng'}</span>
+            </button>
+
+            {/* Stop Button */}
+            <button
+              onClick={handleStopSpeech}
+              className="px-1 py-0.5 rounded bg-rose-900/60 hover:bg-rose-800 text-rose-200 border border-rose-500/40 cursor-pointer"
+              title="Dừng hẳn giọng đọc"
+            >
+              <span>⏹</span>
+            </button>
           </div>
         )}
+
+        {/* Voice Gender Switcher (Female Hoài My / Male Nam Minh) */}
+        <div className="flex items-center bg-slate-950/80 rounded-lg p-0.5 border border-sky-500/30 text-[11px]">
+          <button
+            onClick={() => onToggleVoiceGender('female')}
+            className={`px-2 py-0.5 rounded font-medium cursor-pointer transition flex items-center space-x-1 ${
+              voiceGender === 'female'
+                ? 'bg-rose-600 text-white font-bold shadow'
+                : 'text-slate-400 hover:text-white'
+            }`}
+            title="Giọng nữ Miền Bắc (Hoài My - Chuẩn Hà Nội trong trẻo)"
+          >
+            <span>👩</span>
+            <span className="hidden lg:inline text-[10px]">Nữ Bắc</span>
+          </button>
+          <button
+            onClick={() => onToggleVoiceGender('male')}
+            className={`px-2 py-0.5 rounded font-medium cursor-pointer transition flex items-center space-x-1 ${
+              voiceGender === 'male'
+                ? 'bg-sky-600 text-white font-bold shadow'
+                : 'text-slate-400 hover:text-white'
+            }`}
+            title="Giọng nam Miền Bắc (Nam Minh - Chuẩn Hà Nội trầm ấm)"
+          >
+            <span>👨</span>
+            <span className="hidden lg:inline text-[10px]">Nam Bắc</span>
+          </button>
+        </div>
 
         {/* Speed Switcher */}
         <div className="flex items-center bg-slate-950/80 rounded-lg p-0.5 border border-sky-500/30 text-[11px]">

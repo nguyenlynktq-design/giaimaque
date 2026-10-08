@@ -3,6 +3,7 @@ import { audioService } from '../../services/audioService';
 
 interface Stage4HarborProps {
   onStageComplete: () => void;
+  onSkipStage?: () => void;
   onAwardPoints: (points: number, reason: string) => void;
   onShowToast: (msg: string, icon?: string) => void;
 }
@@ -18,6 +19,7 @@ const HARBOR_WORDS = [
 
 export const Stage4Harbor: React.FC<Stage4HarborProps> = ({
   onStageComplete,
+  onSkipStage,
   onAwardPoints,
   onShowToast,
 }) => {
@@ -73,9 +75,20 @@ export const Stage4Harbor: React.FC<Stage4HarborProps> = ({
             Chọn những từ ngữ miêu tả đúng bức tranh bến cá trong ngày trở về:
           </span>
         </div>
-        <span className="text-xs bg-sky-950/80 px-2.5 py-0.5 rounded-full text-cyan-200 border border-cyan-400/30 whitespace-nowrap ml-2 font-medium">
-          Đúng: <strong className="text-amber-400">{selectedWords.size}</strong>/3 từ
-        </span>
+        <div className="flex items-center space-x-2">
+          <span className="text-xs bg-sky-950/80 px-2.5 py-0.5 rounded-full text-cyan-200 border border-cyan-400/30 whitespace-nowrap font-medium">
+            Đúng: <strong className="text-amber-400">{selectedWords.size}</strong>/3 từ
+          </span>
+          {onSkipStage && (
+            <button
+              onClick={onSkipStage}
+              className="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-amber-300 text-xs font-semibold border border-slate-600 cursor-pointer transition active:scale-95"
+              title="Chuyển sang chặng kế tiếp mà không tính điểm"
+            >
+              ⏭️ Chuyển chặng (0đ)
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Animated Harbor Scene */}
@@ -136,6 +149,17 @@ export const Stage4Harbor: React.FC<Stage4HarborProps> = ({
                   B. Sự ồn ào hỗn loạn gây mệt mỏi cho người dân sau chuyến đi biển dài ngày
                 </button>
               </div>
+
+              {onSkipStage && (
+                <div className="mt-3 pt-2 border-t border-slate-800 flex justify-end">
+                  <button
+                    onClick={onSkipStage}
+                    className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-amber-300 text-xs font-semibold border border-slate-600 cursor-pointer transition active:scale-95"
+                  >
+                    ⏭️ Chuyển chặng tiếp (0 điểm)
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         )}

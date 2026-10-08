@@ -1,33 +1,53 @@
-// Audio Service for Northern Vietnamese Male Voice TTS & Sound Effects
-type AudioListener = (isPlaying: boolean, text: string) => void;
+// Audio Service for Northern Vietnamese Voice (Female Hoài My & Male Nam Minh) TTS & Sound Effects
+export type AudioListener = (
+  isPlaying: boolean,
+  isPaused: boolean,
+  text: string,
+  voiceGender: 'female' | 'male'
+) => void;
 
 class AudioService {
   private audioCtx: AudioContext | null = null;
   private soundEnabled: boolean = true;
   private voiceRate: number = 1.0;
+  private voiceGender: 'female' | 'male' = 'female'; // Default Northern Vietnamese Female Voice (Hoài My)
   private currentAudioElement: HTMLAudioElement | null = null;
   private cachedBlobs: Map<string, string> = new Map();
   private listeners: Set<AudioListener> = new Set();
   private isSpeaking: boolean = false;
+  private isPaused: boolean = false;
   private currentText: string = '';
+  private userInteracted: boolean = false;
 
   constructor() {
-    // Pre-warm voices on browser if available
-    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-      window.speechSynthesis.onvoiceschanged = () => {
-        // Voice list ready
+    if (typeof window !== 'undefined') {
+      const handleInteraction = () => {
+        this.userInteracted = true;
+        this.initAudioContext();
+        window.removeEventListener('click', handleInteraction);
+        window.removeEventListener('touchstart', handleInteraction);
       };
+      window.addEventListener('click', handleInteraction, { once: true });
+      window.addEventListener('touchstart', handleInteraction, { once: true });
+
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.onvoiceschanged = () => {
+          // Warm up browser voices
+        };
+      }
     }
   }
 
   public subscribe(listener: AudioListener): () => void {
     this.listeners.add(listener);
-    listener(this.isSpeaking, this.currentText);
+    listener(this.isSpeaking, this.isPaused, this.currentText, this.voiceGender);
     return () => this.listeners.delete(listener);
   }
 
   private notify() {
-    this.listeners.forEach((fn) => fn(this.isSpeaking, this.currentText));
+    this.listeners.forEach((fn) =>
+      fn(this.isSpeaking, this.isPaused, this.currentText, this.voiceGender)
+    );
   }
 
   public setSoundEnabled(enabled: boolean) {
@@ -49,6 +69,27 @@ class AudioService {
     return this.voiceRate;
   }
 
+  public setVoiceGender(gender: 'female' | 'male') {
+    this.voiceGender = gender;
+    this.notify();
+  }
+
+  public getVoiceGender(): 'female' | 'male' {
+    return this.voiceGender;
+  }
+
+  public getIsSpeaking(): boolean {
+    return this.isSpeaking;
+  }
+
+  public getIsPaused(): boolean {
+    return this.isPaused;
+  }
+
+  public getCurrentText(): string {
+    return this.currentText;
+  }
+
   private initAudioContext() {
     if (!this.audioCtx && typeof window !== 'undefined') {
       const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
@@ -61,7 +102,7 @@ class AudioService {
     }
   }
 
-  // Play synthesized tones using Web Audio API
+  // Play synthesized musical tones using Web Audio API
   public playTone(freq: number, type: OscillatorType = 'sine', duration = 0.25, gainVal = 0.18) {
     if (!this.soundEnabled) return;
     try {
@@ -122,6 +163,50 @@ class AudioService {
     });
   }
 
+  // Pause playback
+  public pause() {
+    if (!this.isSpeaking) return;
+
+    if (this.currentAudioElement && !this.currentAudioElement.paused) {
+      this.currentAudioElement.pause();
+    }
+
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window && window.speechSynthesis.speaking) {
+      window.speechSynthesis.pause();
+    }
+
+    this.isPaused = true;
+    this.notify();
+  }
+
+  // Resume playback
+  public resume() {
+    if (!this.isSpeaking || !this.isPaused) return;
+
+    if (this.currentAudioElement && this.currentAudioElement.paused) {
+      this.currentAudioElement.play().catch((err) => {
+        console.warn('Resume audio element error:', err);
+      });
+    }
+
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window && window.speechSynthesis.paused) {
+      window.speechSynthesis.resume();
+    }
+
+    this.isPaused = false;
+    this.notify();
+  }
+
+  // Toggle pause/resume
+  public togglePause() {
+    if (this.isPaused) {
+      this.resume();
+    } else if (this.isSpeaking) {
+      this.pause();
+    }
+  }
+
+  // Stop completely
   public stop() {
     if (this.currentAudioElement) {
       this.currentAudioElement.pause();
@@ -132,11 +217,12 @@ class AudioService {
       window.speechSynthesis.cancel();
     }
     this.isSpeaking = false;
+    this.isPaused = false;
     this.currentText = '';
     this.notify();
   }
 
-  // High-fidelity Northern Vietnamese Male Voice Speech Synthesis
+  // High-fidelity Northern Vietnamese Voice Speech Synthesis
   public async speak(
     text: string,
     options: { isPoem?: boolean; onStart?: () => void; onEnd?: () => void } = {}
@@ -147,11 +233,13 @@ class AudioService {
     this.initAudioContext();
 
     this.isSpeaking = true;
+    this.isPaused = false;
     this.currentText = text;
     this.notify();
     if (options.onStart) options.onStart();
 
-    const cacheKey = `${text.trim()}_${options.isPoem ? 'poem' : 'prose'}_${this.voiceRate}`;
+    const cleanText = text.trim();
+    const cacheKey = `${cleanText}_${this.voiceRate}_${this.voiceGender}`;
 
     // 1. Check client-side cached Blob URL
     if (this.cachedBlobs.has(cacheKey)) {
@@ -160,15 +248,15 @@ class AudioService {
       return;
     }
 
-    // 2. Try calling Gemini Neural TTS backend API for natural Northern Vietnamese male voice
+    // 2. Fetch from backend TTS endpoint (Microsoft vi-VN-HoaiMyNeural Female / vi-VN-NamMinhNeural Male)
     try {
       const res = await fetch('/api/tts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          text,
-          voiceName: 'Puck', // Warm, expressive male persona
+          text: cleanText,
           speed: this.voiceRate,
+          voice: this.voiceGender,
           isPoem: options.isPoem || false,
         }),
       });
@@ -176,13 +264,12 @@ class AudioService {
       if (res.ok) {
         const data = await res.json();
         if (data.audioBase64) {
-          // Convert base64 to Blob URL
           const binary = atob(data.audioBase64);
           const bytes = new Uint8Array(binary.length);
           for (let i = 0; i < binary.length; i++) {
             bytes[i] = binary.charCodeAt(i);
           }
-          const blob = new Blob([bytes], { type: data.mimeType || 'audio/wav' });
+          const blob = new Blob([bytes], { type: data.mimeType || 'audio/mp3' });
           const url = URL.createObjectURL(blob);
           this.cachedBlobs.set(cacheKey, url);
 
@@ -191,44 +278,81 @@ class AudioService {
         }
       }
     } catch (err) {
-      console.warn('Backend TTS failed, falling back to Web Speech API:', err);
+      console.warn('Backend TTS request error, trying fallback:', err);
     }
 
-    // 3. Fallback: Browser Web Speech API tuned to Northern Vietnamese male timbre
-    this.fallbackBrowserSpeech(text, options.onEnd);
+    // 3. Secondary Fallback: Direct Google Translate Vietnamese Audio Stream (Female Northern accent)
+    try {
+      const gUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(
+        cleanText.slice(0, 250)
+      )}&tl=vi&client=tw-ob`;
+      this.playAudioUrl(gUrl, options.onEnd);
+      return;
+    } catch (gErr) {
+      console.warn('Google stream error, checking browser voices:', gErr);
+    }
+
+    // 4. Tertiary Fallback: Browser Web Speech API (only if genuine Vietnamese voice exists)
+    this.fallbackBrowserSpeech(cleanText, options.onEnd);
   }
 
   private playAudioUrl(url: string, onEnd?: () => void) {
     const audio = new Audio(url);
-    audio.playbackRate = this.voiceRate;
     this.currentAudioElement = audio;
 
     audio.onended = () => {
       this.isSpeaking = false;
+      this.isPaused = false;
       this.currentText = '';
       this.notify();
       if (onEnd) onEnd();
     };
 
     audio.onerror = () => {
+      console.warn('Audio element error on URL playback');
       this.isSpeaking = false;
+      this.isPaused = false;
       this.currentText = '';
       this.notify();
       if (onEnd) onEnd();
     };
 
-    audio.play().catch((err) => {
-      console.warn('Playback error:', err);
-      this.isSpeaking = false;
-      this.currentText = '';
-      this.notify();
-      if (onEnd) onEnd();
-    });
+    const playPromise = audio.play();
+    if (playPromise !== undefined) {
+      playPromise.catch((err) => {
+        console.warn('Audio play() was interrupted or prevented by browser:', err);
+        this.isSpeaking = false;
+        this.isPaused = false;
+        this.currentText = '';
+        this.notify();
+        if (onEnd) onEnd();
+      });
+    }
   }
 
   private fallbackBrowserSpeech(text: string, onEnd?: () => void) {
     if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
       this.isSpeaking = false;
+      this.isPaused = false;
+      this.currentText = '';
+      this.notify();
+      if (onEnd) onEnd();
+      return;
+    }
+
+    const voices = window.speechSynthesis.getVoices();
+    // Strictly find Vietnamese voices (never let it default to English!)
+    const viVoices = voices.filter(
+      (v) =>
+        v.lang.toLowerCase().startsWith('vi') ||
+        v.name.toLowerCase().includes('vietnam') ||
+        v.name.toLowerCase().includes('tiếng việt')
+    );
+
+    if (viVoices.length === 0) {
+      console.warn('No Vietnamese voice installed in browser, skipping English voice distortion.');
+      this.isSpeaking = false;
+      this.isPaused = false;
       this.currentText = '';
       this.notify();
       if (onEnd) onEnd();
@@ -237,22 +361,29 @@ class AudioService {
 
     const utter = new SpeechSynthesisUtterance(text);
     utter.rate = this.voiceRate;
-    utter.pitch = 0.92; // Slightly deeper, warm male tone
+    utter.pitch = this.voiceGender === 'female' ? 1.05 : 0.92;
     utter.lang = 'vi-VN';
 
-    const voices = window.speechSynthesis.getVoices();
-    // Prioritize Northern Vietnamese male voice (Nam, Minh, Northern, vi-VN)
-    const northernMaleVoice =
-      voices.find(
+    // Prioritize selected gender voice
+    if (this.voiceGender === 'female') {
+      const femaleVi = viVoices.find(
         (v) =>
-          v.lang.includes('vi') &&
-          (v.name.toLowerCase().includes('nam') ||
-            v.name.toLowerCase().includes('minh') ||
-            v.name.toLowerCase().includes('male'))
-      ) || voices.find((v) => v.lang.includes('vi') || v.lang.startsWith('vi'));
-
-    if (northernMaleVoice) {
-      utter.voice = northernMaleVoice;
+          v.name.toLowerCase().includes('hoaimy') ||
+          v.name.toLowerCase().includes('linh') ||
+          v.name.toLowerCase().includes('mai') ||
+          v.name.toLowerCase().includes('female') ||
+          v.name.toLowerCase().includes('google tiếng việt')
+      );
+      utter.voice = femaleVi || viVoices[0];
+    } else {
+      const maleVi = viVoices.find(
+        (v) =>
+          v.name.toLowerCase().includes('nam') ||
+          v.name.toLowerCase().includes('minh') ||
+          v.name.toLowerCase().includes('male') ||
+          v.name.toLowerCase().includes('an')
+      );
+      utter.voice = maleVi || viVoices[0];
     }
 
     utter.onend = () => {
